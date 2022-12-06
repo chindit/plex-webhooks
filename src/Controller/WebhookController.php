@@ -12,14 +12,22 @@ use Symfony\Component\Routing\Annotation\Route;
 
 class WebhookController extends AbstractController
 {
-    #[Route('/webhook', name: 'app_webhook')]
+    #[Route('/', name: 'app_webhook')]
     public function index(Request $request, EntityManagerInterface $entityManager): JsonResponse
     {
-        $webhookContent = json_decode($request->getContent(), true);
+        $webhookContent = json_decode($request->request->get('payload'), true);
+        if (!$webhookContent) {
+            return $this->json(null, Response::HTTP_BAD_REQUEST);
+        }
 
         $webhook = (new PlexWebhook())
             ->setContent($webhookContent)
             ->setType($webhookContent['event']);
+
+        if ($request->files->has('thumb')) {
+            $webhook->setThumb(file_get_contents($request->files->get('thumb')->getPathname()));
+        }
+
         $entityManager->persist($webhook);
         $entityManager->flush();
 

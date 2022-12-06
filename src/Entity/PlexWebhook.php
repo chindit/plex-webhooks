@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Repository\PlexWebhookRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: PlexWebhookRepository::class)]
@@ -21,6 +22,9 @@ class PlexWebhook
 
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
+
+    #[ORM\Column(type: Types::BLOB, nullable: true)]
+    private $thumb = null;
 
     public function __construct()
     {
@@ -59,5 +63,17 @@ class PlexWebhook
     public function getCreatedAt(): \DateTimeImmutable
     {
         return $this->createdAt;
+    }
+
+    public function getThumb()
+    {
+        return $this->thumb;
+    }
+
+    public function setThumb($thumb): self
+    {
+        $this->thumb = $thumb;
+
+        return $this;
     }
 }
