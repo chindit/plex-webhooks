@@ -39,6 +39,16 @@ class PlexWebhookRepository extends ServiceEntityRepository
         }
     }
 
+    public function findNewMoviesFromLastWeek(): array
+    {
+        return $this->createQueryBuilder('p')
+            ->where('p.createdAt > :lastWeek')
+            ->andWhere('p.type = :type')
+            ->setParameter('lastWeek', (new \DateTimeImmutable())->sub(new \DateInterval('P1W')))
+            ->setParameter('type', 'library.new')
+            ->getQuery()
+            ->getResult();
+    }
 //    /**
 //     * @return PlexWebhook[] Returns an array of PlexWebhook objects
 //     */

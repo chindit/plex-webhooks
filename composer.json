@@ -14,10 +14,14 @@
         "symfony/dotenv": "6.2.*",
         "symfony/flex": "^2",
         "symfony/framework-bundle": "6.2.*",
+        "symfony/mailer": "6.2.*",
         "symfony/maker-bundle": "^1.48",
         "symfony/monolog-bundle": "^3.0",
         "symfony/runtime": "6.2.*",
-        "symfony/yaml": "6.2.*"
+        "symfony/templating": "6.2.*",
+        "symfony/yaml": "6.2.*",
+        "twig/cssinliner-extra": "^3.4",
+        "twig/extra-bundle": "^3.4"
     },
     "config": {
         "allow-plugins": {

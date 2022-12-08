@@ -1,0 +1,50 @@
+{% apply inline_css %}
+    <style>
+        .triple-line {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+        }
+        .double-line {
+            display: grid;
+            grid-template-columns: 1fr 75%;
+        }
+        .is-marged-top {
+            margin-top: 25px;
+        }
+        .is-title {
+            font-weight: bold;
+            font-size: x-large;
+        }
+        .justify {
+            text-align: justify;
+        }
+        .center {
+            margin: 0 auto 10px auto;
+            text-align: center;
+        }
+        .align-end {
+            justify-self: center;
+        }
+    </style>
+<body>
+    <div class="container">
+        <div class="is-title center">Films de la semaine</div>
+        <div class="mb-3">Voici les films (et séries) qui ont fait leur arrivée sur le NAS cette semaine:</div>
+        {% for movie in movies %}
+            <div class="is-title is-marged-top">{{ movie.content.Metadata.title }}</div>
+            <div class="double-line">
+                <div class="align-end"><img src="cid:{{ movie.content.Metadata.ratingKey }}" class="card-img-top" style="width:150px;"
+                          alt="{{ movie.content.Metadata.title }}"></div>
+                <div class="justify">{{ movie.content.Metadata.summary }}</div>
+            </div>
+            <div class="triple-line">
+                <div>
+                    {{ movie.content.Metadata.year }}
+                </div>
+                <div>{{ (movie.content.Metadata.duration/1000)|date('H:i:s', '+00:00 GMT') }}</div>
+                <div>{{ movie.content.Metadata.Genre|map(genre => genre.tag)|join(', ') }}</div>
+            </div>
+            <div>{{ movie.content.Metadata.Role|map(role => role.tag)|slice(0, 5)|join(', ') }}</div>
+        {% endfor %}
+    </div>
+{% endapply %}
