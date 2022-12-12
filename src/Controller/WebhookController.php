@@ -15,6 +15,11 @@ class WebhookController extends AbstractController
     #[Route('/', name: 'app_webhook')]
     public function index(Request $request, EntityManagerInterface $entityManager): JsonResponse
     {
+        if (!$request->request->get('payload'))
+        {
+            return $this->json(null, Response::HTTP_BAD_REQUEST);
+        }
+
         $webhookContent = json_decode($request->request->get('payload'), true);
         if (!$webhookContent) {
             return $this->json(null, Response::HTTP_BAD_REQUEST);
