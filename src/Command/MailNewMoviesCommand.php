@@ -39,6 +39,12 @@ class MailNewMoviesCommand extends Command
         /** @var PlexWebhook[] $newMovies */
         $newMovies = $this->webhookRepository->findNewMoviesFromLastWeek();
 
+        if (empty($newMovies)) {
+            $io->success('No new movie detected');
+
+            return Command::SUCCESS;
+        }
+
         $email = (new Email())
             ->from(new Address('d.lumaye@mailtunnel.eu', 'David'))
             ->to(...$this->destination)
