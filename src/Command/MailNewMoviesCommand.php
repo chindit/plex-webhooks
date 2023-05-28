@@ -51,7 +51,9 @@ class MailNewMoviesCommand extends Command
             ->subject('Les films de la semaine sur DadaNAS');
 
         foreach ($newMovies as $movie) {
-            $email->addPart((new DataPart($movie->getThumb(), $movie->getContent()['Metadata']['ratingKey'], 'image/jpeg'))->asInline());
+            if ($movie->getThumb()) {
+                $email->addPart((new DataPart($movie->getThumb(), $movie->getContent()['Metadata']['ratingKey'], 'image/jpeg'))->asInline());
+            }
         }
 
         $this->mailer->send(
