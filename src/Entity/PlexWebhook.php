@@ -14,7 +14,7 @@ class PlexWebhook
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column]
+    #[ORM\Column(type: Types::JSON)]
     private array $content = [];
 
     #[ORM\Column(length: 255)]
