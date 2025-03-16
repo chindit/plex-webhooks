@@ -8,20 +8,20 @@
         "ext-ctype": "*",
         "ext-iconv": "*",
         "doctrine/doctrine-bundle": "^2.13",
-        "doctrine/doctrine-migrations-bundle": "^3.3",
-        "doctrine/orm": "^3.2",
-        "symfony/console": "7.1.5",
-        "symfony/dotenv": "7.1.5",
+        "doctrine/doctrine-migrations-bundle": "^3.4",
+        "doctrine/orm": "^3.3",
+        "symfony/console": "7.2.1",
+        "symfony/dotenv": "7.2.0",
         "symfony/flex": "^2",
-        "symfony/framework-bundle": "7.1.5",
-        "symfony/mailer": "7.1.5",
-        "symfony/maker-bundle": "^1.61",
+        "symfony/framework-bundle": "7.2.3",
+        "symfony/mailer": "7.2.3",
+        "symfony/maker-bundle": "^1.62",
         "symfony/monolog-bundle": "^3.10",
-        "symfony/runtime": "7.1.1",
-        "symfony/templating": "6.4.8",
-        "symfony/yaml": "7.1.5",
-        "twig/cssinliner-extra": "^3.13",
-        "twig/extra-bundle": "^3.13"
+        "symfony/runtime": "7.2.3",
+        "symfony/templating": "6.4.13",
+        "symfony/yaml": "7.2.3",
+        "twig/cssinliner-extra": "^3.19",
+        "twig/extra-bundle": "^3.19"
     },
     "config": {
         "allow-plugins": {
@@ -67,12 +67,12 @@
     "extra": {
         "symfony": {
             "allow-contrib": false,
-            "require": "7.1.*"
+            "require": "7.2.*"
         }
     },
     "require-dev": {
-        "symfony/debug-bundle": "7.1.1",
-        "symfony/stopwatch": "7.1.1",
-        "symfony/web-profiler-bundle": "7.1.4"
+        "symfony/debug-bundle": "7.2.0",
+        "symfony/stopwatch": "7.2.2",
+        "symfony/web-profiler-bundle": "7.2.3"
     }
 }
