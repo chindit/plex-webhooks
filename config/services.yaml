@@ -23,6 +23,11 @@ services:
     App\Command\MailNewMoviesCommand:
         arguments:
             $destination: '%env(csv:DESTINATION_EMAIL)%'
+            $sender: '%env(string:MAIL_SENDER)%'
+    Chindit\PlexApi\PlexServer:
+        arguments:
+            $host: '%env(string:default::PLEX_SERVER_URL)%'
+            $key: '%env(string:default::PLEX_TOKEN)%'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

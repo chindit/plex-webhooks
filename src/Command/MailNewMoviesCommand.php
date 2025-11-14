@@ -4,6 +4,8 @@ namespace App\Command;
 
 use App\Entity\PlexWebhook;
 use App\Repository\PlexWebhookRepository;
+use Chindit\Collection\Collection;
+use Chindit\PlexApi\PlexServer;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -25,7 +27,9 @@ class MailNewMoviesCommand extends Command
         private readonly PlexWebhookRepository $webhookRepository,
         private readonly Environment $templateEngine,
         private readonly MailerInterface $mailer,
-        private readonly array $destination
+        private readonly array $destination,
+		private readonly string $sender,
+	    private readonly PlexServer $plexServer
     )
     {
         parent::__construct();
@@ -36,17 +40,31 @@ class MailNewMoviesCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $io->info('Starting process of newly added movied');
 
-        /** @var PlexWebhook[] $newMovies */
-        $newMovies = $this->webhookRepository->findNewMoviesFromLastWeek();
+        /** @var Collection<PlexWebhook> $newMovies */
+        $newMovies = new Collection($this->webhookRepository->findNewMoviesFromLastWeek());
 
-        if (empty($newMovies)) {
-            $io->success('No new movie detected');
+		$canConnectToPlex = $this->plexServer->checkConnection();
+		$newMovies = $newMovies->map(function(PlexWebhook $movie) use ($canConnectToPlex) {
+			if (str_starts_with($movie->getContent()['Metadata']['guid'], 'local')) {
+				if (!$canConnectToPlex) {
+					return null;
+				}
+				$movie = $this->plexServer->getFromKey($movie->getContent()['Metadata']['ratingKey']);
+			}
 
-            return Command::SUCCESS;
-        }
+			return $movie;
+		})
+			->filter()
+			->keyBy(fn(PlexWebhook $movie) => $movie->getContent()['Metadata']['ratingKey']);
+
+	    if ($newMovies->isEmpty()) {
+		    $io->success('No new movie detected');
+
+		    return Command::SUCCESS;
+	    }
 
         $email = (new Email())
-            ->from(new Address('d.lumaye@mailtunnel.eu', 'David'))
+            ->from(new Address($this->sender, 'David'))
             ->to(...$this->destination)
             ->subject('Les films de la semaine sur DadaNAS');
 
