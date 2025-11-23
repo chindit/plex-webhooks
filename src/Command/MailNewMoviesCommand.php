@@ -5,6 +5,7 @@ namespace App\Command;
 use App\Entity\PlexWebhook;
 use App\Repository\PlexWebhookRepository;
 use Chindit\Collection\Collection;
+use Chindit\PlexApi\Model\Movie;
 use Chindit\PlexApi\PlexServer;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -55,7 +56,7 @@ class MailNewMoviesCommand extends Command
 			return $movie;
 		})
 			->filter()
-			->keyBy(fn(PlexWebhook $movie) => $movie->getContent()['Metadata']['ratingKey']);
+			->keyBy(fn(PlexWebhook|Movie $movie) => $movie instanceof PlexWebhook ? $movie->getContent()['Metadata']['ratingKey'] : $movie->getRatingKey());
 
 	    if ($newMovies->isEmpty()) {
 		    $io->success('No new movie detected');
