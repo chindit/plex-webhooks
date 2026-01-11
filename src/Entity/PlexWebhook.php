@@ -3,6 +3,7 @@
 namespace App\Entity;
 
 use App\Repository\PlexWebhookRepository;
+use Chindit\PlexApi\Model\Movie;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 
@@ -75,5 +76,28 @@ class PlexWebhook
         $this->thumb = $thumb;
 
         return $this;
+    }
+
+    public function asMovie(): Movie
+    {
+        $metadata = $this->content['Metadata'];
+
+        $values = array_merge($metadata, [
+            'ratingKey' => (string)$metadata['ratingKey'],
+            'year' => (string)($metadata['year'] ?? ''),
+            'duration' => (string)($metadata['duration'] ?? ''),
+            'rating' => (string)($metadata['rating'] ?? 0),
+            'aspectRatio' => (float)($metadata['aspectRatio'] ?? 0),
+            'bitrate' => (int)($metadata['bitrate'] ?? 0),
+            'width' => (int)($metadata['width'] ?? 0),
+            'height' => (int)($metadata['height'] ?? 0),
+            'genres' => array_column($metadata['Genre'] ?? [], 'tag'),
+            'directors' => array_column($metadata['Director'] ?? [], 'tag'),
+            'writers' => array_column($metadata['Writer'] ?? [], 'tag'),
+            'actors' => array_column($metadata['Role'] ?? [], 'tag'),
+            'countries' => array_column($metadata['Country'] ?? [], 'tag'),
+        ]);
+
+        return new Movie($values);
     }
 }

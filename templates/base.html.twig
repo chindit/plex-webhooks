@@ -30,21 +30,21 @@
     <div class="container">
         <div class="is-title center">Films de la semaine</div>
         <div class="mb-3">Voici les films (et séries) qui ont fait leur arrivée sur le NAS cette semaine:</div>
-        {% for movie in movies %}
-            <div class="is-title is-marged-top">{{ movie.content.Metadata.title }}</div>
+        {% for item in movies %}
+            <div class="is-title is-marged-top">{{ item.movie.title }}</div>
             <div class="double-line">
-                <div class="align-end"><img src="cid:{{ movie.content.Metadata.ratingKey }}" class="card-img-top" style="width:150px;"
-                          alt="{{ movie.content.Metadata.title }}"></div>
-                <div class="justify">{{ movie.content.Metadata.summary }}</div>
+                <div class="align-end"><img src="cid:{{ item.movie.ratingKey }}" class="card-img-top" style="width:150px;"
+                          alt="{{ item.movie.title }}"></div>
+                <div class="justify">{{ item.movie.summary }}</div>
             </div>
             <div class="triple-line">
                 <div>
-                    {{ movie.content.Metadata.year }}
+                    {{ item.movie.year }}
                 </div>
-                <div>{{ (movie.content.Metadata.duration/1000)|date('H:i:s') }}</div>
-                <div>{{ movie.content.Metadata.Genre|map(genre => genre.tag)|join(', ') }}</div>
+                <div>{{ item.movie.duration|date('H:i:s', 'UTC') }}</div>
+                <div>{{ item.movie.genres|join(', ') }}</div>
             </div>
-            <div>{{ movie.content.Metadata.Role|map(role => role.tag)|slice(0, 5)|join(', ') }}</div>
+            <div>{{ item.movie.actors|slice(0, 5)|join(', ') }}</div>
         {% endfor %}
     </div>
 {% endapply %}

@@ -39,24 +39,33 @@ class MailNewMoviesCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        $io->info('Starting process of newly added movied');
+        $io->info('Starting process of newly added movies');
 
         /** @var Collection<PlexWebhook> $newMovies */
         $newMovies = new Collection($this->webhookRepository->findNewMoviesFromLastWeek());
 
 		$canConnectToPlex = $this->plexServer->checkConnection();
-		$newMovies = $newMovies->map(function(PlexWebhook $movie) use ($canConnectToPlex) {
-			if (str_starts_with($movie->getContent()['Metadata']['guid'], 'local')) {
-				if (!$canConnectToPlex) {
-					return null;
+		$newMovies = $newMovies->map(function(PlexWebhook $webhook) use ($canConnectToPlex) {
+            $movie = null;
+			if (str_starts_with($webhook->getContent()['Metadata']['guid'], 'local')) {
+				if ($canConnectToPlex) {
+				    $movie = $this->plexServer->getFromKey($webhook->getContent()['Metadata']['ratingKey']);
 				}
-				$movie = $this->plexServer->getFromKey($movie->getContent()['Metadata']['ratingKey']);
-			}
+			} else {
+                $movie = $webhook->asMovie();
+            }
 
-			return $movie;
+            if (!$movie) {
+                return null;
+            }
+
+			return [
+                'movie' => $movie,
+                'thumb' => $webhook->getThumb(),
+            ];
 		})
 			->filter()
-			->keyBy(fn(PlexWebhook|Movie $movie) => $movie instanceof PlexWebhook ? $movie->getContent()['Metadata']['ratingKey'] : $movie->getRatingKey());
+			->keyBy(fn(array $item) => $item['movie']->getRatingKey());
 
 	    if ($newMovies->isEmpty()) {
 		    $io->success('No new movie detected');
@@ -69,9 +78,11 @@ class MailNewMoviesCommand extends Command
             ->to(...$this->destination)
             ->subject('Les films de la semaine sur DadaNAS');
 
-        foreach ($newMovies as $movie) {
-            if ($movie->getThumb()) {
-                $email->addPart((new DataPart($movie->getThumb(), $movie->getContent()['Metadata']['ratingKey'], 'image/jpeg'))->asInline());
+        foreach ($newMovies as $item) {
+            /** @var Movie $movie */
+            $movie = $item['movie'];
+            if ($item['thumb']) {
+                $email->addPart((new DataPart($item['thumb'], $movie->getRatingKey(), 'image/jpeg'))->asInline());
             }
         }
 
