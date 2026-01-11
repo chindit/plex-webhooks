@@ -51,16 +51,16 @@
         },
         {
             "name": "chindit/plex-api",
-            "version": "2.1.3",
+            "version": "2.1.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/chindit/plex-api.git",
-                "reference": "f90499493309323dc81c0b335515ea60a155e706"
+                "reference": "644fc9a3fa53fd84a0e71b8a9f8e03d2b3168e4e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/chindit/plex-api/zipball/f90499493309323dc81c0b335515ea60a155e706",
-                "reference": "f90499493309323dc81c0b335515ea60a155e706",
+                "url": "https://api.github.com/repos/chindit/plex-api/zipball/644fc9a3fa53fd84a0e71b8a9f8e03d2b3168e4e",
+                "reference": "644fc9a3fa53fd84a0e71b8a9f8e03d2b3168e4e",
                 "shasum": ""
             },
             "require": {
@@ -92,9 +92,9 @@
             "description": "A simple API library to interact with a Plex server",
             "support": {
                 "issues": "https://github.com/chindit/plex-api/issues",
-                "source": "https://github.com/chindit/plex-api/tree/2.1.3"
+                "source": "https://github.com/chindit/plex-api/tree/2.1.4"
             },
-            "time": "2026-01-11T11:35:14+00:00"
+            "time": "2026-01-11T14:06:29+00:00"
         },
         {
             "name": "doctrine/collections",
