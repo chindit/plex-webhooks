@@ -8,22 +8,22 @@
         "ext-ctype": "*",
         "ext-iconv": "*",
         "chindit/collection": "^1.0",
-        "chindit/plex-api": "2.1.2",
-        "doctrine/doctrine-bundle": "^2.13",
-        "doctrine/doctrine-migrations-bundle": "^3.4",
-        "doctrine/orm": "^3.3",
-        "symfony/console": "^7.3",
-        "symfony/dotenv": "^7.3",
+        "chindit/plex-api": "^2.1",
+        "doctrine/doctrine-bundle": "^3.2",
+        "doctrine/doctrine-migrations-bundle": "^4.0",
+        "doctrine/orm": "^3.6",
+        "symfony/console": "^8.0",
+        "symfony/dotenv": "^8.0",
         "symfony/flex": "^2",
-        "symfony/framework-bundle": "^7.3",
-        "symfony/mailer": "^7.3",
-        "symfony/maker-bundle": "^1.62",
-        "symfony/monolog-bundle": "^3.10",
-        "symfony/runtime": "^7.3",
+        "symfony/framework-bundle": "^8.0",
+        "symfony/mailer": "^8.0",
+        "symfony/maker-bundle": "^1.65",
+        "symfony/monolog-bundle": "^4.0",
+        "symfony/runtime": "^8.0",
         "symfony/templating": "^6.4",
-        "symfony/yaml": "^7.3",
-        "twig/cssinliner-extra": "^3.19",
-        "twig/extra-bundle": "^3.19"
+        "symfony/yaml": "^8.0",
+        "twig/cssinliner-extra": "^3.22",
+        "twig/extra-bundle": "^3.22"
     },
     "config": {
         "allow-plugins": {
@@ -69,13 +69,13 @@
     "extra": {
         "symfony": {
             "allow-contrib": false,
-            "require": "7.3.*"
+            "require": "8.0.*"
         }
     },
     "require-dev": {
-        "symfony/debug-bundle": "^7.3",
-        "symfony/maker-bundle":  "^1.62",
-        "symfony/stopwatch": "^7.3",
-        "symfony/web-profiler-bundle": "^7.3"
+        "symfony/debug-bundle": "^8.0",
+        "symfony/maker-bundle": "^1.65",
+        "symfony/stopwatch": "^8.0",
+        "symfony/web-profiler-bundle": "^8.0"
     }
 }
