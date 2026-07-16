@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\PlexWebhook;
+use App\Enum\PlexEventType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -39,38 +40,30 @@ class PlexWebhookRepository extends ServiceEntityRepository
         }
     }
 
+    /**
+     * @return PlexWebhook[]
+     */
     public function findNewMoviesFromLastWeek(): array
     {
         return $this->createQueryBuilder('p')
             ->where('p.createdAt > :lastWeek')
             ->andWhere('p.type = :type')
             ->setParameter('lastWeek', (new \DateTimeImmutable())->sub(new \DateInterval('P1W')))
-            ->setParameter('type', 'library.new')
+            ->setParameter('type', PlexEventType::LibraryNew->value)
             ->getQuery()
             ->getResult();
     }
-//    /**
-//     * @return PlexWebhook[] Returns an array of PlexWebhook objects
-//     */
-//    public function findByExampleField($value): array
-//    {
-//        return $this->createQueryBuilder('p')
-//            ->andWhere('p.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->orderBy('p.id', 'ASC')
-//            ->setMaxResults(10)
-//            ->getQuery()
-//            ->getResult()
-//        ;
-//    }
 
-//    public function findOneBySomeField($value): ?PlexWebhook
-//    {
-//        return $this->createQueryBuilder('p')
-//            ->andWhere('p.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->getQuery()
-//            ->getOneOrNullResult()
-//        ;
-//    }
+    /**
+     * Deletes every webhook older than the given date and returns the number of rows removed.
+     */
+    public function deleteOlderThan(\DateTimeImmutable $threshold): int
+    {
+        return (int) $this->createQueryBuilder('p')
+            ->delete()
+            ->where('p.createdAt < :threshold')
+            ->setParameter('threshold', $threshold)
+            ->getQuery()
+            ->execute();
+    }
 }

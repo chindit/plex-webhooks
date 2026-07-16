@@ -20,7 +20,7 @@ use Twig\Environment;
 
 #[AsCommand(
     name: 'app:mail:new-movies',
-    description: 'Add a short description for your command',
+    description: 'Sends a digest email of the movies added to Plex during the last week',
 )]
 class MailNewMoviesCommand extends Command
 {
@@ -47,9 +47,14 @@ class MailNewMoviesCommand extends Command
 		$canConnectToPlex = $this->plexServer->checkConnection();
 		$newMovies = $newMovies->map(function(PlexWebhook $webhook) use ($canConnectToPlex) {
             $movie = null;
-			if (str_starts_with($webhook->getContent()['Metadata']['guid'], 'local')) {
+            $guid = $webhook->getGuid();
+            if ($guid === null) {
+                return null;
+            }
+
+			if (str_starts_with($guid, 'local')) {
 				if ($canConnectToPlex) {
-				    $movie = $this->plexServer->getFromKey($webhook->getContent()['Metadata']['ratingKey']);
+				    $movie = $this->plexServer->getFromKey($webhook->getMetadata()['ratingKey']);
 				}
 			} else {
                 $movie = $webhook->asMovie();

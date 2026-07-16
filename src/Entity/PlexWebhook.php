@@ -24,6 +24,7 @@ class PlexWebhook
     #[ORM\Column]
     private \DateTimeImmutable $createdAt;
 
+    /** @var resource|string|null */
     #[ORM\Column(type: Types::BLOB, nullable: true)]
     private $thumb = null;
 
@@ -78,12 +79,25 @@ class PlexWebhook
         return $this;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    public function getMetadata(): array
+    {
+        return $this->content['Metadata'] ?? [];
+    }
+
+    public function getGuid(): ?string
+    {
+        return $this->getMetadata()['guid'] ?? null;
+    }
+
     public function asMovie(): Movie
     {
-        $metadata = $this->content['Metadata'];
+        $metadata = $this->getMetadata();
 
         $values = array_merge($metadata, [
-            'ratingKey' => (string)$metadata['ratingKey'],
+            'ratingKey' => (string)($metadata['ratingKey'] ?? ''),
             'year' => (string)($metadata['year'] ?? ''),
             'duration' => (string)($metadata['duration'] ?? ''),
             'rating' => (string)($metadata['rating'] ?? 0),
