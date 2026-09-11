@@ -1,0 +1,20 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Names and native types intentionally match the existing Doctrine table so
+// production data can be kept in place during the cut-over.
+model PlexWebhook {
+  id        Int      @id @default(autoincrement())
+  content   Json     @db.Json
+  type      String   @db.VarChar(255)
+  createdAt DateTime @map("created_at") @db.Timestamp(0)
+  thumb     Bytes?   @db.ByteA
+
+  @@map("plex_webhook")
+}

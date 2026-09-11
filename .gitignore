@@ -14,3 +14,8 @@
 /.phpunit.cache/
 ###< phpunit/phpunit ###
 /.idea/
+/node_modules/
+/dist/
+/coverage/
+/src/generated/prisma/
+*.tsbuildinfo
