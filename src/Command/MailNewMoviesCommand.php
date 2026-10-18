@@ -3,9 +3,9 @@
 namespace App\Command;
 
 use App\Entity\PlexWebhook;
+use App\Plex\PlexClient;
 use App\Repository\PlexWebhookRepository;
 use Chindit\PlexApi\Model\Movie;
-use Chindit\PlexApi\PlexServer;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -29,7 +29,7 @@ class MailNewMoviesCommand extends Command
         private readonly MailerInterface $mailer,
         private readonly array $destination,
         private readonly string $sender,
-        private readonly PlexServer $plexServer
+        private readonly PlexClient $plexClient
     )
     {
         parent::__construct();
@@ -40,7 +40,6 @@ class MailNewMoviesCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $io->info('Starting process of newly added movies');
 
-        $canConnectToPlex = $this->plexServer->checkConnection();
         $newMovies = [];
 
         $groups = $this->groupWebhooks($this->webhookRepository->findNewMoviesFromLastWeek());
@@ -56,9 +55,7 @@ class MailNewMoviesCommand extends Command
                     continue;
                 }
                 if ($guid !== null && str_starts_with($guid, 'local')) {
-                    if ($canConnectToPlex) {
-                        $movie = $this->plexServer->getFromKey($webhook->getMetadata()['ratingKey']);
-                    }
+                    $movie = $this->plexClient->getFromKey($webhook->getMetadata()['ratingKey']);
                 } else {
                     $movie = $webhook->asMovie();
                 }

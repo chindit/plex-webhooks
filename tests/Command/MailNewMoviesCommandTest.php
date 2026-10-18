@@ -4,8 +4,8 @@ namespace App\Tests\Command;
 
 use App\Command\MailNewMoviesCommand;
 use App\Entity\PlexWebhook;
+use App\Plex\PlexClient;
 use App\Repository\PlexWebhookRepository;
-use Chindit\PlexApi\PlexServer;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -214,15 +214,14 @@ class MailNewMoviesCommandTest extends TestCase
     public function testLocalEpisodesAreGroupedBeforeFetchingPlexMetadata(): void
     {
         $first = $this->episode(['guid' => 'local://episode/10']);
-        $plexServer = $this->createMock(PlexServer::class);
-        $plexServer->method('checkConnection')->willReturn(true);
-        $plexServer->expects(self::once())->method('getFromKey')->with('10')->willReturn($first->asMovie());
+        $plexClient = $this->createMock(PlexClient::class);
+        $plexClient->expects(self::once())->method('getFromKey')->with('10')->willReturn($first->asMovie());
 
         $email = $this->sendDigest([
             $first,
             $this->episode(['ratingKey' => '11', 'guid' => 'local://episode/11']),
             $first,
-        ], $plexServer);
+        ], $plexClient);
 
         self::assertStringContainsString('2 épisodes ajoutés', $email->getHtmlBody());
     }
@@ -239,10 +238,31 @@ class MailNewMoviesCommandTest extends TestCase
             $mailer,
             ['recipient@example.com'],
             'sender@example.com',
-            $this->createStub(PlexServer::class),
+            $this->createStub(PlexClient::class),
         );
 
         self::assertSame(Command::SUCCESS, (new CommandTester($command))->execute([]));
+    }
+
+    public function testUnavailablePlexDoesNotPreventMailingStoredMetadata(): void
+    {
+        $plexClient = $this->createMock(PlexClient::class);
+        $plexClient->expects(self::once())->method('getFromKey')->with('10')->willReturn(null);
+        $movie = (new PlexWebhook())->setContent(['Metadata' => [
+            'type' => 'movie',
+            'ratingKey' => '500',
+            'guid' => 'plex://movie/500',
+            'title' => 'Available Movie',
+            'summary' => 'Stored summary',
+        ]]);
+        $email = $this->sendDigest([
+            $this->episode(['guid' => 'local://episode/10']),
+            $movie,
+        ], $plexClient);
+
+        self::assertStringContainsString('Available Movie', $email->getHtmlBody());
+        self::assertStringContainsString('Stored summary', $email->getHtmlBody());
+        self::assertStringNotContainsString('Example Series', $email->getHtmlBody());
     }
 
     private function episode(array $metadata = []): PlexWebhook
@@ -260,16 +280,15 @@ class MailNewMoviesCommandTest extends TestCase
     }
 
     /** @param PlexWebhook[] $webhooks */
-    private function sendDigest(array $webhooks, ?PlexServer $plexServer = null): Email
+    private function sendDigest(array $webhooks, ?PlexClient $plexClient = null): Email
     {
         $repository = $this->createStub(PlexWebhookRepository::class);
         $repository->method('findNewMoviesFromLastWeek')->willReturn($webhooks);
         $twig = new Environment(new FilesystemLoader(dirname(__DIR__, 2) . '/templates'), ['strict_variables' => true]);
         $twig->addExtension(new CssInlinerExtension());
-        if ($plexServer === null) {
-            $plexServer = $this->createMock(PlexServer::class);
-            $plexServer->method('checkConnection')->willReturn(false);
-            $plexServer->expects(self::never())->method('getFromKey');
+        if ($plexClient === null) {
+            $plexClient = $this->createMock(PlexClient::class);
+            $plexClient->expects(self::never())->method('getFromKey');
         }
         $email = null;
         $mailer = $this->createMock(MailerInterface::class);
@@ -284,7 +303,7 @@ class MailNewMoviesCommandTest extends TestCase
             $mailer,
             ['recipient@example.com'],
             'sender@example.com',
-            $plexServer,
+            $plexClient,
         );
 
         self::assertSame(Command::SUCCESS, (new CommandTester($command))->execute([]));
