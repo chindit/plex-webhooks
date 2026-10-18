@@ -1,8 +1,10 @@
 {% apply inline_css %}
     <style>
-        .triple-line {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
+        dt {
+            font-weight: bold;
+        }
+        dd {
+            margin: 0 0 10px 20px;
         }
         .double-line {
             display: grid;
@@ -42,20 +44,28 @@
                     {% if item.hasDetails %}
                         {{ item.movie.summary }}
                     {% endif %}
-                    {% if item.episodeCount > 0 %}
-                        <div>{{ item.episodeCount }} {{ item.episodeCount == 1 ? 'épisode ajouté' : 'épisodes ajoutés' }}</div>
-                    {% endif %}
                 </div>
             </div>
             {% if item.hasDetails %}
-                <div class="triple-line">
-                    <div>
-                        {{ item.movie.year }}
-                    </div>
-                    <div>{{ item.movie.duration|date('H:i:s', 'UTC') }}</div>
-                    <div>{{ item.movie.genres|join(', ') }}</div>
-                </div>
-                <div>{{ item.movie.actors|slice(0, 5)|join(', ') }}</div>
+                <dl>
+                    <dt>Année de sortie</dt>
+                    <dd>{{ item.movie.year|default('—') }}</dd>
+                    <dt>Durée</dt>
+                    <dd>
+                        {% if item.movie.duration > 0 %}
+                            {{ item.movie.duration // 3600 }}h{{ '%02d'|format((item.movie.duration % 3600) // 60) }}m
+                        {% else %}
+                            —
+                        {% endif %}
+                    </dd>
+                    <dt>Genres</dt>
+                    <dd>{{ item.movie.genres|join(', ')|default('—') }}</dd>
+                    <dt>Acteurs</dt>
+                    <dd>{{ item.movie.actors|slice(0, 5)|join(', ')|default('—') }}</dd>
+                </dl>
+            {% endif %}
+            {% if item.episodeCount > 0 %}
+                <p><strong>=&gt; {{ item.episodeCount }} {{ item.episodeCount == 1 ? 'épisode ajouté' : 'épisodes ajoutés' }}</strong></p>
             {% endif %}
         {% endfor %}
     </div>
