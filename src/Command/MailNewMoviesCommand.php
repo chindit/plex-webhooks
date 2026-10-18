@@ -2,9 +2,7 @@
 
 namespace App\Command;
 
-use App\Entity\PlexWebhook;
 use App\Repository\PlexWebhookRepository;
-use Chindit\Collection\Collection;
 use Chindit\PlexApi\Model\Movie;
 use Chindit\PlexApi\PlexServer;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -29,8 +27,8 @@ class MailNewMoviesCommand extends Command
         private readonly Environment $templateEngine,
         private readonly MailerInterface $mailer,
         private readonly array $destination,
-		private readonly string $sender,
-	    private readonly PlexServer $plexServer
+        private readonly string $sender,
+        private readonly PlexServer $plexServer
     )
     {
         parent::__construct();
@@ -41,42 +39,73 @@ class MailNewMoviesCommand extends Command
         $io = new SymfonyStyle($input, $output);
         $io->info('Starting process of newly added movies');
 
-        /** @var Collection<PlexWebhook> $newMovies */
-        $newMovies = new Collection($this->webhookRepository->findNewMoviesFromLastWeek());
+        $canConnectToPlex = $this->plexServer->checkConnection();
+        $newMovies = [];
+        $seenEpisodes = [];
 
-		$canConnectToPlex = $this->plexServer->checkConnection();
-		$newMovies = $newMovies->map(function(PlexWebhook $webhook) use ($canConnectToPlex) {
+        foreach ($this->webhookRepository->findNewMoviesFromLastWeek() as $webhook) {
             $movie = null;
             $guid = $webhook->getGuid();
             if ($guid === null) {
-                return null;
+                continue;
             }
 
-			if (str_starts_with($guid, 'local')) {
-				if ($canConnectToPlex) {
-				    $movie = $this->plexServer->getFromKey($webhook->getMetadata()['ratingKey']);
-				}
-			} else {
+            $metadata = $webhook->getMetadata();
+            $isEpisode = ($metadata['type'] ?? null) === 'episode';
+            $itemKey = 'movie:' . ($metadata['ratingKey'] ?? $guid);
+            $episodeKey = (string) ($metadata['ratingKey'] ?? $guid);
+
+            if ($isEpisode) {
+                // The grandparent is the show; the parent only identifies the season.
+                $seriesKey = $metadata['grandparentRatingKey'] ?? $metadata['grandparentGuid'] ?? null;
+                if ($seriesKey === null && isset($metadata['grandparentTitle'])) {
+                    $seriesKey = json_encode([
+                        $metadata['librarySectionID'] ?? null,
+                        $metadata['grandparentTitle'],
+                    ]);
+                }
+                $itemKey = 'show:' . ($seriesKey ?? $episodeKey);
+
+                if (isset($seenEpisodes[$itemKey][$episodeKey])) {
+                    continue;
+                }
+
+                if (isset($newMovies[$itemKey])) {
+                    ++$newMovies[$itemKey]['episodeCount'];
+                    $newMovies[$itemKey]['thumb'] ??= $webhook->getThumb();
+                    $seenEpisodes[$itemKey][$episodeKey] = true;
+                    continue;
+                }
+            }
+
+            if (str_starts_with($guid, 'local')) {
+                if ($canConnectToPlex) {
+                    $movie = $this->plexServer->getFromKey($metadata['ratingKey']);
+                }
+            } else {
                 $movie = $webhook->asMovie();
             }
 
             if (!$movie) {
-                return null;
+                continue;
             }
 
-			return [
+            $newMovies[$itemKey] = [
                 'movie' => $movie,
                 'thumb' => $webhook->getThumb(),
+                'title' => $isEpisode ? ($metadata['grandparentTitle'] ?? $movie->getTitle()) : $movie->getTitle(),
+                'episodeCount' => $isEpisode ? 1 : 0,
             ];
-		})
-			->filter()
-			->keyBy(fn(array $item) => $item['movie']->getRatingKey());
+            if ($isEpisode) {
+                $seenEpisodes[$itemKey][$episodeKey] = true;
+            }
+        }
 
-	    if ($newMovies->isEmpty()) {
-		    $io->success('No new movie detected');
+        if ($newMovies === []) {
+            $io->success('No new movie detected');
 
-		    return Command::SUCCESS;
-	    }
+            return Command::SUCCESS;
+        }
 
         $email = (new Email())
             ->from(new Address($this->sender, 'David'))

@@ -31,20 +31,31 @@
         <div class="is-title center">Films de la semaine</div>
         <div class="mb-3">Voici les films (et séries) qui ont fait leur arrivée sur le NAS cette semaine:</div>
         {% for item in movies %}
-            <div class="is-title is-marged-top">{{ item.movie.title }}</div>
+            <div class="is-title is-marged-top">{{ item.title }}</div>
             <div class="double-line">
-                <div class="align-end"><img src="cid:{{ item.movie.ratingKey }}" class="card-img-top" style="width:150px;"
-                          alt="{{ item.movie.title }}"></div>
-                <div class="justify">{{ item.movie.summary }}</div>
-            </div>
-            <div class="triple-line">
-                <div>
-                    {{ item.movie.year }}
+                <div class="align-end">
+                    {% if item.thumb %}
+                        <img src="cid:{{ item.movie.ratingKey }}" class="card-img-top" style="width:150px;" alt="{{ item.title }}">
+                    {% endif %}
                 </div>
-                <div>{{ item.movie.duration|date('H:i:s', 'UTC') }}</div>
-                <div>{{ item.movie.genres|join(', ') }}</div>
+                <div class="justify">
+                    {% if item.episodeCount > 0 %}
+                        {{ item.episodeCount }} {{ item.episodeCount == 1 ? 'épisode ajouté' : 'épisodes ajoutés' }}
+                    {% else %}
+                        {{ item.movie.summary }}
+                    {% endif %}
+                </div>
             </div>
-            <div>{{ item.movie.actors|slice(0, 5)|join(', ') }}</div>
+            {% if item.episodeCount == 0 %}
+                <div class="triple-line">
+                    <div>
+                        {{ item.movie.year }}
+                    </div>
+                    <div>{{ item.movie.duration|date('H:i:s', 'UTC') }}</div>
+                    <div>{{ item.movie.genres|join(', ') }}</div>
+                </div>
+                <div>{{ item.movie.actors|slice(0, 5)|join(', ') }}</div>
+            {% endif %}
         {% endfor %}
     </div>
 {% endapply %}
