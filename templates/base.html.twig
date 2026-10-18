@@ -39,14 +39,15 @@
                     {% endif %}
                 </div>
                 <div class="justify">
-                    {% if item.episodeCount > 0 %}
-                        {{ item.episodeCount }} {{ item.episodeCount == 1 ? 'épisode ajouté' : 'épisodes ajoutés' }}
-                    {% else %}
+                    {% if item.hasDetails %}
                         {{ item.movie.summary }}
+                    {% endif %}
+                    {% if item.episodeCount > 0 %}
+                        <div>{{ item.episodeCount }} {{ item.episodeCount == 1 ? 'épisode ajouté' : 'épisodes ajoutés' }}</div>
                     {% endif %}
                 </div>
             </div>
-            {% if item.episodeCount == 0 %}
+            {% if item.hasDetails %}
                 <div class="triple-line">
                     <div>
                         {{ item.movie.year }}

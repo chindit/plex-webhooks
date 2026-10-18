@@ -2,6 +2,7 @@
 
 namespace App\Command;
 
+use App\Entity\PlexWebhook;
 use App\Repository\PlexWebhookRepository;
 use Chindit\PlexApi\Model\Movie;
 use Chindit\PlexApi\PlexServer;
@@ -41,64 +42,46 @@ class MailNewMoviesCommand extends Command
 
         $canConnectToPlex = $this->plexServer->checkConnection();
         $newMovies = [];
-        $seenEpisodes = [];
 
-        foreach ($this->webhookRepository->findNewMoviesFromLastWeek() as $webhook) {
+        $groups = $this->groupWebhooks($this->webhookRepository->findNewMoviesFromLastWeek());
+        foreach ($groups as $group) {
+            // Prefer the show's own description and poster, regardless of event order.
+            usort($group['webhooks'], fn (PlexWebhook $a, PlexWebhook $b) =>
+                ($this->seriesIdentity($b)['priority'] ?? 0) <=> ($this->seriesIdentity($a)['priority'] ?? 0)
+            );
             $movie = null;
-            $guid = $webhook->getGuid();
-            if ($guid === null) {
-                continue;
-            }
-
-            $metadata = $webhook->getMetadata();
-            $isEpisode = ($metadata['type'] ?? null) === 'episode';
-            $itemKey = 'movie:' . ($metadata['ratingKey'] ?? $guid);
-            $episodeKey = (string) ($metadata['ratingKey'] ?? $guid);
-
-            if ($isEpisode) {
-                // The grandparent is the show; the parent only identifies the season.
-                $seriesKey = $metadata['grandparentRatingKey'] ?? $metadata['grandparentGuid'] ?? null;
-                if ($seriesKey === null && isset($metadata['grandparentTitle'])) {
-                    $seriesKey = json_encode([
-                        $metadata['librarySectionID'] ?? null,
-                        $metadata['grandparentTitle'],
-                    ]);
-                }
-                $itemKey = 'show:' . ($seriesKey ?? $episodeKey);
-
-                if (isset($seenEpisodes[$itemKey][$episodeKey])) {
+            foreach ($group['webhooks'] as $webhook) {
+                $guid = $webhook->getGuid();
+                if ($guid === null && !$group['isSeries']) {
                     continue;
                 }
-
-                if (isset($newMovies[$itemKey])) {
-                    ++$newMovies[$itemKey]['episodeCount'];
-                    $newMovies[$itemKey]['thumb'] ??= $webhook->getThumb();
-                    $seenEpisodes[$itemKey][$episodeKey] = true;
-                    continue;
+                if ($guid !== null && str_starts_with($guid, 'local')) {
+                    if ($canConnectToPlex) {
+                        $movie = $this->plexServer->getFromKey($webhook->getMetadata()['ratingKey']);
+                    }
+                } else {
+                    $movie = $webhook->asMovie();
                 }
-            }
-
-            if (str_starts_with($guid, 'local')) {
-                if ($canConnectToPlex) {
-                    $movie = $this->plexServer->getFromKey($metadata['ratingKey']);
+                if ($movie !== null) {
+                    break;
                 }
-            } else {
-                $movie = $webhook->asMovie();
             }
 
             if (!$movie) {
                 continue;
             }
 
-            $newMovies[$itemKey] = [
-                'movie' => $movie,
-                'thumb' => $webhook->getThumb(),
-                'title' => $isEpisode ? ($metadata['grandparentTitle'] ?? $movie->getTitle()) : $movie->getTitle(),
-                'episodeCount' => $isEpisode ? 1 : 0,
-            ];
-            if ($isEpisode) {
-                $seenEpisodes[$itemKey][$episodeKey] = true;
+            $thumb = $webhook->getThumb();
+            foreach ($group['webhooks'] as $candidate) {
+                $thumb ??= $candidate->getThumb();
             }
+            $newMovies[] = [
+                'movie' => $movie,
+                'thumb' => $thumb,
+                'title' => $this->seriesIdentity($webhook)['title'] ?? $movie->getTitle(),
+                'episodeCount' => count($group['episodes']),
+                'hasDetails' => !$group['isSeries'] || $webhook->getMetadata()['type'] === 'show',
+            ];
         }
 
         if ($newMovies === []) {
@@ -128,5 +111,93 @@ class MailNewMoviesCommand extends Command
         $io->success('Mail sent');
 
         return Command::SUCCESS;
+    }
+
+    /**
+     * @param PlexWebhook[] $webhooks
+     * @return array<string, array{webhooks: PlexWebhook[], episodes: array<string, true>, isSeries: bool}>
+     */
+    private function groupWebhooks(array $webhooks): array
+    {
+        $entries = [];
+        $aliases = [];
+        foreach ($webhooks as $webhook) {
+            $metadata = $webhook->getMetadata();
+            $identity = $this->seriesIdentity($webhook);
+            $key = 'movie:' . ($metadata['ratingKey'] ?? $webhook->getGuid());
+            if ($identity !== null) {
+                $field = $identity['ratingKey'] !== null ? 'ratingKey' : ($identity['guid'] !== null ? 'guid' : 'title');
+                $key = json_encode([$identity['scope'], $field, $identity[$field] ?? $metadata['ratingKey'] ?? $webhook->getGuid()]);
+                $rank = match ($field) { 'ratingKey' => 2, 'guid' => 1, default => 0 };
+                foreach (['guid', 'title'] as $alias) {
+                    if ($identity[$alias] !== null) {
+                        $aliases[$identity['scope']][$alias][$identity[$alias]][$key] = $rank;
+                    }
+                }
+            }
+            $entries[] = ['webhook' => $webhook, 'identity' => $identity, 'key' => $key];
+        }
+
+        $groups = [];
+        foreach ($entries as $entry) {
+            ['webhook' => $webhook, 'identity' => $identity, 'key' => $key] = $entry;
+            if ($identity !== null && $identity['ratingKey'] === null) {
+                // Resolve incomplete events against all known shows, without merging namesakes.
+                foreach (['guid', 'title'] as $alias) {
+                    $candidates = $aliases[$identity['scope']][$alias][$identity[$alias] ?? ''] ?? [];
+                    if ($candidates === []) {
+                        continue;
+                    }
+                    $bestRank = max($candidates);
+                    $candidates = array_filter($candidates, static fn (int $rank) => $rank === $bestRank);
+                    if (count($candidates) === 1) {
+                        $resolvedKey = array_key_first($candidates);
+                        if ($resolvedKey !== $entry['key'] || $alias === 'title') {
+                            $key = $resolvedKey;
+                            break;
+                        }
+                    }
+                }
+            }
+            $groups[$key] ??= ['webhooks' => [], 'episodes' => [], 'isSeries' => $identity !== null];
+            $groups[$key]['webhooks'][] = $webhook;
+            $metadata = $webhook->getMetadata();
+            if (($metadata['type'] ?? null) === 'episode') {
+                $episodeKey = $metadata['ratingKey'] ?? $webhook->getGuid();
+                if ($episodeKey !== null) {
+                    $groups[$key]['episodes'][$episodeKey] = true;
+                }
+            }
+        }
+
+        return $groups;
+    }
+
+    /** @return array{ratingKey: ?string, guid: ?string, title: ?string, scope: string, priority: int}|null */
+    private function seriesIdentity(PlexWebhook $webhook): ?array
+    {
+        $metadata = $webhook->getMetadata();
+        // Show events identify themselves; seasons refer to their parent, episodes to their grandparent.
+        $prefix = match ($metadata['type'] ?? null) {
+            'show' => '',
+            'season' => 'parent',
+            'episode' => 'grandparent',
+            default => null,
+        };
+        if ($prefix === null) {
+            return null;
+        }
+        $identity = [];
+        foreach (['ratingKey', 'guid', 'title'] as $field) {
+            $value = $metadata[$prefix === '' ? $field : $prefix . ucfirst($field)] ?? null;
+            $identity[$field] = $value !== null && $value !== '' ? (string) $value : null;
+        }
+        $identity['scope'] = json_encode([
+            $webhook->getContent()['Server']['uuid'] ?? null,
+            isset($metadata['librarySectionID']) ? (string) $metadata['librarySectionID'] : null,
+        ]);
+        $identity['priority'] = match ($prefix) { '' => 2, 'parent' => 1, default => 0 };
+
+        return $identity;
     }
 }
