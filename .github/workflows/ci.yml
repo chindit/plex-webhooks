@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: PHP 8.5
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      APP_ENV: test
+      APP_DEBUG: '1'
+      DATABASE_URL: 'sqlite:///%kernel.project_dir%/var/ci.db'
+      MAILER_DSN: 'null://null'
+      DESTINATION_EMAIL: 'recipient@example.com'
+      MAIL_SENDER: 'sender@example.com'
+      PLEX_SERVER_URL: 'http://127.0.0.1'
+      PLEX_TOKEN: 'ci-token'
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: ctype, dom, iconv, intl, mbstring, pdo_sqlite, simplexml, xml, xmlwriter
+          coverage: none
+          tools: composer:v2
+
+      - name: Find Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer downloads
+        uses: actions/cache@v5
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-php-8.5-composer-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-8.5-composer-
+
+      - name: Validate Composer configuration
+        run: composer validate --strict --no-check-publish
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Check PHP syntax
+        run: find src tests config public -type f -name '*.php' -print0 | xargs -0 -n 1 php -l
+
+      - name: Validate Symfony configuration and templates
+        run: |
+          php bin/console lint:yaml config .github/workflows
+          php bin/console lint:twig templates
+          php bin/console lint:container
+
+      - name: Run tests
+        run: php bin/phpunit
